@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
-import TaskForm from "../components/TaskForm";
-import TaskCard from "../components/TaskCard";
+import TaskForm from "frontend/src/components/TaskForm";
+import TaskCard from "frontend/src/components/TaskCard";
 
 function Dashboard() {
     const [tasks, setTasks] = useState([]);
