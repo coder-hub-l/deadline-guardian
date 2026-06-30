@@ -116,7 +116,7 @@ function TaskCard({ task, fetchTasks }) {
                 <div className="w-full h-4 bg-slate-700 rounded-full overflow-hidden">
 
                     <div
-                        className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-700"
+                        className="h-full bg-linear-to-r from-cyan-500 to-blue-500 transition-all duration-700"
                         style={{
                             width: `${progress}%`
                         }}
