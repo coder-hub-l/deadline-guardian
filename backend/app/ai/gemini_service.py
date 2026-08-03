@@ -3,10 +3,10 @@ from datetime import datetime
 
 from google import genai
 
-from app.config import settings
+from app.config import GEMINI_API_KEY
 
 # Initialize Gemini client
-client = genai.Client(api_key=settings.GEMINI_API_KEY)
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 
 async def analyze_task(task):

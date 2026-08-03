@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database.database import client
 from app.routes.task_routes import router as task_router
 from app.routes.ai_routes import router as ai_router
+from app.routes.auth_routes import router as auth_router
+
 
 
 @asynccontextmanager
@@ -38,6 +40,7 @@ app.add_middleware(
 
 app.include_router(task_router)
 app.include_router(ai_router)
+app.include_router(auth_router)
 
 
 @app.get("/")

@@ -4,8 +4,7 @@ from app.schemas.task_schema import TaskCreate
 from app.ai.gemini_service import analyze_task
 
 
-
-async def create_task(task: TaskCreate):
+async def create_task(task: TaskCreate,current_user):
     # Convert Pydantic model to dictionary
     task_dict = task.model_dump()
 
@@ -22,66 +21,78 @@ async def create_task(task: TaskCreate):
     task_dict["reason"] = ai_result.get("reason")
 
     # Store in MongoDB
+    task_dict["user_id"] = str(current_user["_id"])
+
     result = await task_collection.insert_one(task_dict)
 
-    # Return inserted document
     task_dict["_id"] = str(result.inserted_id)
-
     return task_dict
 
 
-async def get_all_tasks():
+async def get_all_tasks(current_user):
     """
     Fetch all tasks from MongoDB.
     """
     tasks = []
 
-    async for task in task_collection.find():
+    async for task in task_collection.find( {
+        "user_id": str(current_user["_id"])
+    }):
         task["_id"] = str(task["_id"])
         tasks.append(task)
 
-    return tasks
+    return await tasks
 
 
-async def get_task(task_id: str):
+async def get_task(task_id: str,current_user):
     """
     Fetch a single task by ID.
     """
     task = await task_collection.find_one(
-        {"_id": ObjectId(task_id)}
+    {
+        "user_id": str(current_user["_id"])
+    ,
+
+        "_id": ObjectId(task_id)}
     )
 
     if task:
         task["_id"] = str(task["_id"])
 
-    return task
+    return await task
 
 
-async def update_task(task_id: str, task: TaskCreate):
+async def update_task(task_id: str, task: TaskCreate,current_user):
     """
     Update an existing task.
     """
     await task_collection.update_one(
-        {"_id": ObjectId(task_id)},
+        {"_id": ObjectId(task_id),
+         "user_id": str(current_user["_id"])},
         {"$set": task.model_dump()}
     )
 
     updated_task = await task_collection.find_one(
-        {"_id": ObjectId(task_id)}
+        {   
+            "_id": ObjectId(task_id),
+            "user_id": str(current_user["_id"])
+        }
     )
 
     if updated_task:
-        updated_task["_id"] = str(updated_task["_id"])
+        updated_task["_id"] = str(updated_task.pop("_id"))
 
-    return updated_task
+    return await updated_task
 
 
-async def delete_task(task_id: str):
+async def delete_task(task_id: str,current_user):
     """
     Delete a task.
     """
     result = await task_collection.delete_one(
-        {"_id": ObjectId(task_id)}
+        {
+                "user_id": str(current_user["_id"]),
+                "_id": ObjectId(task_id)}
     )
 
-    return result.deleted_count
+    return await result.deleted_count
