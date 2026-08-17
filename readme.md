@@ -1,68 +1,88 @@
-Deadline Guardian
+﻿# Deadline Guardian — AI Task & Completion Risk Estimator
 
-A task manager that uses AI to score deadline urgency, estimate completion risk, and tell you what you're actually likely to miss — not just a to-do list with due dates.
+![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green?logo=fastapi)
+![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-green?logo=mongodb)
+![Gemini](https://img.shields.io/badge/Gemini%20API-AI%20Risk%20Analysis-orange)
+![React](https://img.shields.io/badge/React-18-cyan?logo=react)
+![License](https://img.shields.io/badge/License-MIT-yellow)
 
- Live demo: [add link once deployed] 
- 
- Screenshot/GIF: [add once frontend is live]
+An **AI-driven task management backend** that uses Google Gemini to analyze every task on creation — returning structured priority scores, completion probability estimates, and plain-language risk assessments. Built with per-user MongoDB isolation, Argon2 password hashing, and strict 3-tier architecture.
 
-Tech Stack
+## Architecture
 
-Backend: FastAPI, MongoDB (Motor — async driver), JWT (PyJWT), pwdlib (Argon2 password hashing), Gemini API Frontend: React Deploy: [fill in once deployed — e.g. Render/Railway (backend), Vercel/Netlify (frontend)]
+```
+React Frontend
+      │ REST (JWT Bearer)
+      ▼
+┌────────────────────────────────────────────┐
+│             FastAPI Backend                 │
+│                                             │
+│  Routes (HTTP only, no business logic)     │
+│       │                                     │
+│  Services (business logic, Gemini calls)   │
+│       │                                     │
+│  Database Layer (MongoDB, per-user scope)  │
+└────────────────────────────────────────────┘
+         │                    │
+    MongoDB Atlas         Gemini API
+  (per-user isolation)  (risk analysis)
+```
 
-Key Features
-Per-user task isolation, enforced at the database layer. Every task read, update, and delete query is scoped by user_id derived from the authenticated JWT — not just hidden in the UI. One user can never read or modify another user's tasks, even by guessing an ID.
-AI-driven urgency scoring. Each task is sent to Gemini on creation, which returns a structured priority score, urgency label, difficulty estimate, completion probability, recommended start time, and a plain-language risk assessment — merged directly into the stored task.
-Stateless JWT authentication with Argon2 password hashing (via pwdlib), following OWASP's current recommendation over older algorithms like bcrypt-only or SHA-based hashing.
-Clean separation between client-writable and server-owned fields. Task ownership, timestamps, and AI-derived fields can never be set or overwritten by the client — the API schemas simply don't expose them as input, so there's nothing to override.
-Fail-fast configuration. Missing required environment variables crash the app at startup with a clear error, instead of surfacing as a cryptic failure on the first request that needs them.
-Architecture
-Client → Routes (auth + request validation only)
-       → Services (business logic + MongoDB access)
-       → MongoDB
+## Features
 
-Routes never touch the database directly, and services never import anything from FastAPI (no Depends, no HTTPException). This keeps business logic testable independent of the web framework, and keeps each layer responsible for exactly one thing: routes authenticate and validate, services decide what happens, MongoDB stores it.
+| Feature | Details |
+|---|---|
+| **AI Risk Analysis** | Gemini analyzes each task: priority score, completion %, risk narrative |
+| **Security** | Argon2id password hashing (OWASP recommended), JWT auth |
+| **Isolation** | Per-user MongoDB collections — no data leakage between users |
+| **3-Tier Arch** | Routes → Services → Database — strict layer enforcement |
+| **OWASP Compliance** | Argon2 hashing, token expiry, input validation via Pydantic |
 
-app/
-├── auth/          # password hashing, JWT creation/verification, get_current_user dependency
-├── database/      # Motor client + database handle
-├── models/        # MongoDB collection references
-├── routes/        # FastAPI route handlers — auth, tasks, ai
-├── schemas/       # Pydantic request/response models
-├── services/      # business logic, ownership checks, MongoDB queries
-└── ai/            # Gemini integration
-Setup
-bash
-git clone <repo-url>
-cd <repo-name>
+## Quick Start
 
-pip install -r requirements.txt --break-system-packages   # or use a virtualenv
+```bash
+git clone https://github.com/coder-hub-l/deadline-guardian.git
+cd deadline-guardian/backend
+
+pip install -r requirements.txt
 
 cp .env.example .env
-# fill in: MONGO_URI, DATABASE_NAME, SECRET_KEY, ALGORITHM,
-#          ACCESS_TOKEN_EXPIRE_MINUTES, GEMINI_API_KEY
+# Edit .env with your MongoDB URI and Gemini API key
 
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload --port 8000
+```
 
-The API will be running at http://127.0.0.1:8000. Interactive docs (Swagger UI) are auto-generated at http://127.0.0.1:8000/docs.
+- Swagger Docs: `http://localhost:8000/docs`
+- Health: `http://localhost:8000/health`
 
-API Overview
-Method	Path	Auth required	Description
-POST	/auth/register	No	Create a new user account
-POST	/auth/login	No	Authenticate and receive a JWT
-POST	/tasks	Yes	Create a task (runs Gemini analysis)
-GET	/tasks	Yes	List all tasks belonging to the user
-GET	/tasks/{id}	Yes	Get a single task (owner-only)
-PUT	/tasks/{id}	Yes	Partially update a task (owner-only)
-DELETE	/tasks/{id}	Yes	Delete a task (owner-only)
-POST	/ai/test	Yes	Run Gemini analysis on a task payload without saving it
+## Environment Variables
 
-Full request/response schemas are available in /docs once the server is running — this table is intentionally just an index, not a duplicate of the OpenAPI spec.
+```env
+MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/
+DATABASE_NAME=deadline_guardian
+SECRET_KEY=your-jwt-secret-key
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
+GEMINI_API_KEY=your-gemini-api-key
+```
 
-Auth uses a bearer token: Authorization: Bearer <access_token> on every protected route.
+## API Reference
 
-Known Limitations
-No refresh tokens — access tokens simply expire and require re-login. Fine for a demo, would need a refresh-token flow before production use.
-No rate limiting on /auth/login or /auth/register yet — brute-force protection is a known gap.
-No account deactivation flow (the is_active check exists in the auth dependency, but nothing currently sets it to false).
-Frontend does not yet persist JWTs securely or protect its own API calls — in progress.
+| Endpoint | Method | Description |
+|---|---|---|
+| `/auth/signup` | POST | Register a new user |
+| `/auth/login` | POST | Login and receive JWT |
+| `/tasks/` | GET | List all tasks for authenticated user |
+| `/tasks/` | POST | Create task (triggers Gemini risk analysis) |
+| `/tasks/{id}` | PATCH | Update task |
+| `/tasks/{id}` | DELETE | Delete task |
+| `/health` | GET | Health check |
+
+## Tech Stack
+
+- **Backend**: Python 3.11, FastAPI, Motor (async MongoDB)
+- **Database**: MongoDB Atlas (free tier)
+- **Auth**: JWT (PyJWT), Argon2id password hashing
+- **AI**: Google Gemini API
+- **Frontend**: React 18, Vite
