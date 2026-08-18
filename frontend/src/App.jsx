@@ -1,4 +1,4 @@
-import Dashboard from "frontend/src/pages/Dashboard.jsx";
+import Dashboard from "./pages/Dashboard";
 
 function App() {
     return <Dashboard />;
