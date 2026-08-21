@@ -44,6 +44,7 @@ app.include_router(auth_router)
 
 
 @app.get("/")
+@app.get("/health")
 def home():
     return {
         "message": "Deadline Guardian API is running!"
